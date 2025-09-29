@@ -84,7 +84,6 @@ class championController extends Controller
             ];
 
             return response()->json($data, 201);
-
         } catch (\Throwable $e) { //Usar \Throwable en lugar de \Exception porque captura tanto excepciones como errores fatales.
             return response()->json([
                 'message' => 'Error al guardar el campeón',
@@ -96,53 +95,73 @@ class championController extends Controller
 
     public function show($id)
     {
-        $champion = Champion::find($id);
 
-        if (!$champion) {  //si el mostrar falla
-            $data = [
-                'message' => 'campeon no encontrado',
-                'status' => 404
+        try {
+            $champion = Champion::find($id);
+
+            if (!$champion) {  //si el mostrar falla
+                $data = [
+                    'message' => 'campeon no encontrado',
+                    'status' => 404
+                ];
+                return response()->json($data, 404);
+            }
+
+            if ($champion->state == 0) {  //si el id le pertenece a un campeon eliminado
+                $data = [
+                    'message' => 'ese campeon en concreto fue eliminado',
+                    'status' => 409
+                ];
+                return response()->json($data, 409);
+            }
+
+            $data = [ //si el mostrar funciona
+                'message' => 'ese campeon si existe!!',
+                'product' => $champion,
+                'status' => 200
             ];
-            return response()->json($data, 404);
+
+            return response()->json($data, 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Error al mostrar el campeón',
+                'status' => 500,
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        if ($champion->state == 0) {  //si el id le pertenece a un campeon eliminado
-            $data = [
-                'message' => 'ese campeon en concreto fue eliminado',
-                'status' => 409
-            ];
-            return response()->json($data, 409);
-        }
-
-        $data = [ //si el mostrar funciona
-            'message' => 'ese campeon si existe!!',
-            'product' => $champion,
-            'status' => 200
-        ];
-
-        return response()->json($data, 200);
     }
 
     public function destroy($id)
     {
-        $champion = Champion::find($id);
 
-        if (!$champion) { //si no hay campeones
+        try {
+
+            $champion = Champion::find($id);
+
+            if (!$champion) { //si no hay campeones
+                $data = [
+                    'message' => 'campeon no encontrado',
+                    'status' => 404
+                ];
+                return response()->json($data, 404);
+            }
+
+            $champion->state = 0; // se cambia a 0 y se "elimina"
+            $champion->save();
+
             $data = [
-                'message' => 'campeon no encontrado',
-                'status' => 404
+                'message' => 'campeon eliminado, su nombre fue ' . $champion['name'],
+                'status' => 200
             ];
-            return response()->json($data, 404);
+            return response()->json($data, 200);
+            
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Error al eliminar el campeón',
+                'status' => 500,
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $champion->state = 0; // se cambia a 0 y se "elimina"
-        $champion->save();
-
-        $data = [
-            'message' => 'campeon eliminado, su nombre fue ' . $champion['name'],
-            'status' => 200
-        ];
-        return response()->json($data, 200);
     }
 
     public function update(Request $request, $id)
